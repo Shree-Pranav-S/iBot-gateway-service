@@ -1,0 +1,43 @@
+"""Gateway route mapping and access rules."""
+
+from src.config.settings import settings
+
+ROUTE_MAP = [
+    ("/ws/interview", settings.INTERVIEW_SERVICE_URL),
+    ("/sse", settings.CORE_API_URL),
+    ("/auth", settings.CORE_API_URL),
+    ("/assessments", settings.CORE_API_URL),
+    ("/candidates", settings.CORE_API_URL),
+    ("/recruiter", settings.CORE_API_URL),
+    ("/interview", settings.CORE_API_URL),
+]
+
+UNAUTHENTICATED_ROUTES = {
+    ("POST", "/auth/register"),
+    ("GET", "/interview/validate-token"),
+}
+
+BLOCKED_ROUTES = ["/internal"]
+
+HOP_BY_HOP_HEADERS = {
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailers",
+    "transfer-encoding",
+    "upgrade",
+}
+
+# Cookies are read by the gateway itself — never forwarded to downstream services.
+STRIPPED_REQUEST_HEADERS = HOP_BY_HOP_HEADERS | {"cookie"}
+
+
+def resolve_downstream(path: str) -> str | None:
+    """Return the downstream base URL for a request path."""
+
+    for prefix, downstream_url in ROUTE_MAP:
+        if path.startswith(prefix):
+            return downstream_url
+    return None
