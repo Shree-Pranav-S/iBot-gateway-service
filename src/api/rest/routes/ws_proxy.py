@@ -1,48 +1,24 @@
-"""WebSocket proxy for interview traffic."""
+"""WebSocket proxy route — bridges interview traffic to the interview-engine service."""
 
 import asyncio
 import logging
 from urllib.parse import urlencode
 
-import httpx
 import websockets
 import websockets.exceptions
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from src.config.settings import settings
+from src.core.services.ws_proxy_service import validate_candidate_token
+from src.utils.proxy_utils import ws_base_url
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _ws_base_url(http_url: str) -> str:
-    if http_url.startswith("https://"):
-        return "wss://" + http_url.removeprefix("https://")
-    return "ws://" + http_url.removeprefix("http://")
-
-
-async def _validate_candidate_token(
-    token: str, client: httpx.AsyncClient
-) -> dict[str, str]:
-    """Call core-api's internal endpoint to resolve an invitation token."""
-    response = await client.get(
-        f"{settings.CORE_API_URL.rstrip('/')}/internal/validate-candidate-token",
-        params={"token": token},
-    )
-    response.raise_for_status()
-    payload = response.json()
-    data = payload.get("data", payload)
-    return {
-        "candidate_id": str(data["candidate_id"]),
-        "assessment_id": str(data["assessment_id"]),
-    }
-
-
 @router.websocket("/ws/interview")
-@router.websocket("/ws/interview/{path:path}")
 async def proxy_interview_websocket(
     websocket: WebSocket,
-    path: str = "",
 ) -> None:
     """Bridge frontend interview WebSocket traffic to interview-service."""
 
@@ -52,7 +28,7 @@ async def proxy_interview_websocket(
         return
 
     try:
-        claims = await _validate_candidate_token(token, websocket.app.state.http_client)
+        claims = await validate_candidate_token(token, websocket.app.state.http_client)
     except Exception:
         logger.warning("Candidate token validation failed — closing WS with 1008")
         await websocket.close(code=1008)
@@ -62,8 +38,8 @@ async def proxy_interview_websocket(
 
     query = dict(websocket.query_params)
     query_string = urlencode(query)
-    suffix = f"/ws/interview/{path}" if path else "/ws/interview"
-    service_url = f"{_ws_base_url(settings.INTERVIEW_SERVICE_URL).rstrip('/')}{suffix}"
+    suffix = "/ws/interview"
+    service_url = f"{ws_base_url(settings.INTERVIEW_SERVICE_URL).rstrip('/')}{suffix}"
     if query_string:
         service_url = f"{service_url}?{query_string}"
 
