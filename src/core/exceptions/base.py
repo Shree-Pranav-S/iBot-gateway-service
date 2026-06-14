@@ -46,3 +46,17 @@ class RateLimitException(GatewayException):
 
     status_code = HTTPStatus.TOO_MANY_REQUESTS
     message = "Too many requests."
+
+
+class BadRequestException(GatewayException):
+    """Raised on invalid request formats/parameters."""
+
+    status_code = HTTPStatus.BAD_REQUEST
+    message = "Bad request."
+
+
+class InternalServerException(GatewayException):
+    """Raised for generic internal server errors."""
+
+    status_code = HTTPStatus.INTERNAL_SERVER_ERROR
+    message = "Internal server error."
