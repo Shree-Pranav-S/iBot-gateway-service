@@ -56,6 +56,56 @@ async def proxy_interview_websocket(
         service_url,
     )
 
+    await _bridge_websocket(websocket, service_url, headers)
+
+
+@router.websocket("/ws/interview/demo")
+async def proxy_demo_websocket(
+    websocket: WebSocket,
+) -> None:
+    """Bridge frontend demo interview WebSocket traffic to interview-service."""
+
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008)
+        return
+
+    try:
+        claims = await validate_candidate_token(token, websocket.app.state.http_client)
+    except Exception:
+        logger.warning("Candidate token validation failed — closing WS with 1008")
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+
+    query = dict(websocket.query_params)
+    query_string = urlencode(query)
+    suffix = "/ws/interview/demo"
+    service_url = f"{ws_base_url(settings.INTERVIEW_SERVICE_URL).rstrip('/')}{suffix}"
+    if query_string:
+        service_url = f"{service_url}?{query_string}"
+
+    headers = {
+        "X-Candidate-Id": claims["candidate_id"],
+        "X-Assessment-Id": claims["assessment_id"],
+        "X-Internal-Service": "gateway",
+    }
+
+    logger.info(
+        "WS demo proxy established: candidate=%s assessment=%s -> %s",
+        claims["candidate_id"],
+        claims["assessment_id"],
+        service_url,
+    )
+
+    await _bridge_websocket(websocket, service_url, headers)
+
+
+async def _bridge_websocket(
+    websocket: WebSocket, service_url: str, headers: dict[str, str]
+) -> None:
+    """Helper to bridge a client WebSocket connection to the downstream service."""
     try:
         async with websockets.connect(service_url, extra_headers=headers) as service_ws:
 
