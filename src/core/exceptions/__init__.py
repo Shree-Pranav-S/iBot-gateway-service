@@ -6,7 +6,6 @@ from src.core.exceptions.base import (
     GatewayException,
     InternalServerException,
     NotFoundException,
-    RateLimitException,
     UnauthorizedException,
 )
 
@@ -16,6 +15,5 @@ __all__ = [
     "GatewayException",
     "InternalServerException",
     "NotFoundException",
-    "RateLimitException",
     "UnauthorizedException",
 ]

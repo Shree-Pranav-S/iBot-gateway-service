@@ -41,13 +41,6 @@ class NotFoundException(GatewayException):
     message = "Route not found."
 
 
-class RateLimitException(GatewayException):
-    """Raised when an IP exceeds the configured request window."""
-
-    status_code = HTTPStatus.TOO_MANY_REQUESTS
-    message = "Too many requests."
-
-
 class BadRequestException(GatewayException):
     """Raised on invalid request formats/parameters."""
 

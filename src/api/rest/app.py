@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.middleware.error_handler import register_exception_handlers
 from src.api.middleware.logging import request_logging_middleware
-from src.api.middleware.rate_limit import rate_limit_middleware
 from src.api.rest.routes.health import router as health_router
 from src.api.rest.routes.proxy import router as proxy_router
 from src.api.rest.routes.ws_proxy import router as websocket_router
@@ -39,7 +38,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.middleware("http")(request_logging_middleware)
-    app.middleware("http")(rate_limit_middleware)
     app.include_router(health_router)
     app.include_router(websocket_router)
     app.include_router(proxy_router)

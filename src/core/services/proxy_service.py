@@ -69,14 +69,24 @@ async def handle_login(request: Request) -> JSONResponse:
     The browser never sees the raw JWT values.
     """
     body_bytes = await request.body()
-    upstream_resp = await request.app.state.http_client.post(
-        f"{settings.CORE_API_URL.rstrip('/')}/auth/login",
-        content=body_bytes,
-        headers={
-            "Content-Type": "application/json",
-            "X-Internal-Service": "gateway",
-        },
-    )
+    try:
+        upstream_resp = await request.app.state.http_client.post(
+            f"{settings.CORE_API_URL.rstrip('/')}/auth/login",
+            content=body_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "X-Internal-Service": "gateway",
+            },
+        )
+    except httpx.RequestError as exc:
+        logger.error(f"Downstream connection error in login: {exc}")
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": "Authentication service unavailable.",
+            },
+            status_code=502,
+        )
 
     upstream_body = upstream_resp.json()
 
@@ -98,13 +108,24 @@ async def handle_login(request: Request) -> JSONResponse:
 
     # Core-api login returns tokens only — fetch the recruiter profile separately.
     claims = decode_access_token(access_token)
-    profile_resp = await request.app.state.http_client.get(
-        f"{settings.CORE_API_URL.rstrip('/')}/auth/me",
-        headers={
-            "X-Internal-Service": "gateway",
-            "X-User-Id": str(claims["sub"]),
-        },
-    )
+    try:
+        profile_resp = await request.app.state.http_client.get(
+            f"{settings.CORE_API_URL.rstrip('/')}/auth/me",
+            headers={
+                "X-Internal-Service": "gateway",
+                "X-User-Id": str(claims["sub"]),
+            },
+        )
+    except httpx.RequestError as exc:
+        logger.error(f"Failed to fetch profile due to connection error: {exc}")
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": "Authentication service unavailable.",
+            },
+            status_code=502,
+        )
+
     if profile_resp.status_code != 200:
         logger.error(
             "Failed to fetch recruiter profile after login",
@@ -197,7 +218,7 @@ async def proxy_authenticated(
     request: Request,
     access_token: str,
     claims: dict[str, str],
-) -> StreamingResponse:
+) -> StreamingResponse | JSONResponse:
     """Proxy an authenticated request, injecting identity headers."""
     headers = copy_headers(request)
     headers["X-Internal-Service"] = "gateway"
@@ -214,7 +235,18 @@ async def proxy_authenticated(
         headers=headers,
         content=await request.body(),
     )
-    response = await request.app.state.http_client.send(proxy_request, stream=True)
+
+    try:
+        response = await request.app.state.http_client.send(proxy_request, stream=True)
+    except httpx.RequestError as exc:
+        logger.error(f"Downstream connection error: {exc}")
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": "Service unavailable or starting up.",
+            },
+            status_code=502,
+        )
 
     response_headers = strip_response_headers(response.headers)
     return StreamingResponse(

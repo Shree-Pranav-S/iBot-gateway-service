@@ -29,9 +29,6 @@ class Settings(BaseSettings):
     HTTP_CLIENT_MAX_CONNECTIONS: int = 100
     HTTP_CLIENT_MAX_KEEPALIVE_CONNECTIONS: int = 20
 
-    GENERAL_RATE_LIMIT_PER_MINUTE: int = 100
-    AUTH_RATE_LIMIT_PER_MINUTE: int = 10
-
     # ── Cookie settings ───────────────────────────────────────────────────────
     # Set COOKIE_SECURE=true in GCP / any HTTPS environment.
     # Leave false for local Docker dev (no TLS).

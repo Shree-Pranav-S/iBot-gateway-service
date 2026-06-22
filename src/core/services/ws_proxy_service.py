@@ -14,7 +14,7 @@ async def validate_candidate_token(
     token: str, client: httpx.AsyncClient
 ) -> dict[str, str]:
     """Call core-api's internal endpoint to resolve an invitation token.
-      Returns a dict with ``candidate_id`` and ``assessment_id`` on success.
+      Returns candidate, assessment, and candidate-assessment IDs on success.
     Raises ``httpx.HTTPStatusError`` if the token is invalid or the call fails.
     """
     response = await client.get(
@@ -27,4 +27,7 @@ async def validate_candidate_token(
     return {
         "candidate_id": str(data["candidate_id"]),
         "assessment_id": str(data["assessment_id"]),
+        "candidate_assessment_id": str(
+            data.get("candidate_assessment_id") or data["assessment_id"]
+        ),
     }
