@@ -3,7 +3,7 @@
 from src.config.settings import settings
 
 ROUTE_MAP = [
-    ("/ws/interview", settings.INTERVIEW_SERVICE_URL),
+    ("/livekit", settings.INTERVIEW_SERVICE_URL),
     ("/sse", settings.CORE_API_URL),
     ("/auth", settings.CORE_API_URL),
     ("/assessments", settings.CORE_API_URL),
@@ -15,6 +15,7 @@ ROUTE_MAP = [
 UNAUTHENTICATED_ROUTES = {
     ("POST", "/auth/register"),
     ("GET", "/interview/validate-token"),
+    ("POST", "/livekit/candidate-token"),
 }
 
 BLOCKED_ROUTES = ["/internal"]
@@ -30,7 +31,7 @@ HOP_BY_HOP_HEADERS = {
     "upgrade",
 }
 
-# Cookies are read by the gateway itself — never forwarded to downstream services.
+# Cookies are read by the gateway itself - never forwarded to downstream services.
 STRIPPED_REQUEST_HEADERS = HOP_BY_HOP_HEADERS | {"cookie"}
 
 
