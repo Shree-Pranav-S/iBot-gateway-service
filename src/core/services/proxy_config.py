@@ -9,13 +9,20 @@ ROUTE_MAP = [
     ("/assessments", settings.CORE_API_URL),
     ("/candidates", settings.CORE_API_URL),
     ("/recruiter", settings.CORE_API_URL),
+    ("/notifications", settings.CORE_API_URL),
     ("/interview", settings.CORE_API_URL),
 ]
 
 UNAUTHENTICATED_ROUTES = {
     ("POST", "/auth/register"),
+    ("POST", "/auth/forgot-password"),
+    ("POST", "/auth/verify-otp"),
+    ("POST", "/auth/resend-otp"),
     ("GET", "/interview/validate-token"),
     ("POST", "/livekit/candidate-token"),
+    ("POST", "/livekit/demo-token"),
+    ("POST", "/livekit/session-entry"),
+    ("POST", "/livekit/session-context"),
 }
 
 BLOCKED_ROUTES = ["/internal"]

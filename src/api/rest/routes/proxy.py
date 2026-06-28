@@ -120,6 +120,13 @@ async def proxy_http_request(
         # attach the updated cookies to the response.
         streaming = await proxy_authenticated(path, request, new_access, claims)
 
+        # SSE responses do not terminate under normal operation. Their headers
+        # have not been sent yet, so refreshed cookies can be attached directly
+        # without buffering an infinite response body.
+        if request_path.startswith("/sse/"):
+            set_auth_cookies(streaming, new_access, new_refresh)
+            return streaming
+
         # We cannot set cookies on a StreamingResponse directly in Starlette
         # after the fact, so we buffer for auth refresh responses only
         # (this path is the minority case: only when the access token has

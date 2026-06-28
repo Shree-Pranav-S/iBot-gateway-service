@@ -16,4 +16,4 @@ RUN python -m pip install --upgrade pip \
 
 EXPOSE 8002
 
-ENTRYPOINT ["sh", "-c", "uvicorn src.api.rest.app:app --host 0.0.0.0 --port ${PORT}"]
+ENTRYPOINT ["sh", "-c", "uvicorn src.api.rest.app:app --host 0.0.0.0 --port ${PORT} --timeout-graceful-shutdown 10"]
