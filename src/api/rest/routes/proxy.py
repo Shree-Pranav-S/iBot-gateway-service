@@ -26,6 +26,7 @@ from src.core.exceptions import (
 from src.core.services.proxy_config import (
     BLOCKED_ROUTES,
     UNAUTHENTICATED_ROUTES,
+    matches_prefix,
     resolve_downstream,
 )
 from src.core.services.proxy_service import (
@@ -56,7 +57,7 @@ async def proxy_http_request(
     request_path = f"/{path}"
 
     # ── Blocked internal routes ───────────────────────────────────────────────
-    if any(request_path.startswith(blocked) for blocked in BLOCKED_ROUTES):
+    if any(matches_prefix(request_path, blocked) for blocked in BLOCKED_ROUTES):
         raise ForbiddenException("Internal routes are not externally accessible.")
 
     # ── No downstream configured ──────────────────────────────────────────────

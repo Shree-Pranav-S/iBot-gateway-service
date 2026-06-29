@@ -343,7 +343,6 @@ dependencies = [
     { name = "python-jose", extra = ["cryptography"] },
     { name = "python-json-logger" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -362,7 +361,6 @@ requires-dist = [
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0,<4.0.0" },
     { name = "python-json-logger", specifier = ">=2.0.7,<3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0,<0.31.0" },
-    { name = "websockets", specifier = ">=12.0,<13.0" },
 ]
 
 [package.metadata.requires-dev]

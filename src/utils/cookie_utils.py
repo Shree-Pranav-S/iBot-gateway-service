@@ -35,7 +35,7 @@ def set_auth_cookies(
         value=access_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAME_SITE,  # type: ignore[arg-type]
+        samesite=settings.COOKIE_SAME_SITE,
         max_age=settings.COOKIE_ACCESS_MAX_AGE,
         path="/",
     )
@@ -44,7 +44,7 @@ def set_auth_cookies(
         value=refresh_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAME_SITE,  # type: ignore[arg-type]
+        samesite=settings.COOKIE_SAME_SITE,
         max_age=settings.COOKIE_REFRESH_MAX_AGE,
         path="/",
     )
@@ -57,14 +57,14 @@ def clear_auth_cookies(response: Response) -> None:
         key=ACCESS_COOKIE,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAME_SITE,  # type: ignore[arg-type]
+        samesite=settings.COOKIE_SAME_SITE,
         path="/",
     )
     response.delete_cookie(
         key=REFRESH_COOKIE,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAME_SITE,  # type: ignore[arg-type]
+        samesite=settings.COOKIE_SAME_SITE,
         path="/",
     )
 

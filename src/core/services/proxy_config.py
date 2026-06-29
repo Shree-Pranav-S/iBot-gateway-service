@@ -2,7 +2,7 @@
 
 from src.config.settings import settings
 
-ROUTE_MAP = [
+ROUTE_MAP: tuple[tuple[str, str], ...] = (
     ("/livekit", settings.INTERVIEW_SERVICE_URL),
     ("/sse", settings.CORE_API_URL),
     ("/auth", settings.CORE_API_URL),
@@ -11,7 +11,7 @@ ROUTE_MAP = [
     ("/recruiter", settings.CORE_API_URL),
     ("/notifications", settings.CORE_API_URL),
     ("/interview", settings.CORE_API_URL),
-]
+)
 
 UNAUTHENTICATED_ROUTES = {
     ("POST", "/auth/register"),
@@ -25,7 +25,7 @@ UNAUTHENTICATED_ROUTES = {
     ("POST", "/livekit/session-context"),
 }
 
-BLOCKED_ROUTES = ["/internal"]
+BLOCKED_ROUTES = ("/internal",)
 
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -46,6 +46,11 @@ def resolve_downstream(path: str) -> str | None:
     """Return the downstream base URL for a request path."""
 
     for prefix, downstream_url in ROUTE_MAP:
-        if path.startswith(prefix):
+        if path == prefix or path.startswith(f"{prefix}/"):
             return downstream_url
     return None
+
+
+def matches_prefix(path: str, prefix: str) -> bool:
+    """Return whether a route path belongs to an exact prefix boundary."""
+    return path == prefix or path.startswith(f"{prefix}/")

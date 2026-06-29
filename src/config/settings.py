@@ -1,8 +1,9 @@
 """Application settings for gateway-service."""
 
 from functools import lru_cache
+from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,10 +34,10 @@ class Settings(BaseSettings):
     # Set COOKIE_SECURE=true in GCP / any HTTPS environment.
     # Leave false for local Docker dev (no TLS).
     COOKIE_SECURE: bool = False
-    COOKIE_SAME_SITE: str = "lax"
+    COOKIE_SAME_SITE: Literal["lax", "strict", "none"] = "lax"
     # How long (seconds) each cookie lives in the browser.
     # Access token cookie should match the JWT expiry in core-api.
-    COOKIE_ACCESS_MAX_AGE: int = 3600  # 1 hour
+    COOKIE_ACCESS_MAX_AGE: int = 900
     COOKIE_REFRESH_MAX_AGE: int = 604800  # 7 days
 
     # ── CORS ─────────────────────────────────────────────────────────────────
@@ -49,6 +50,15 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Split the comma-separated CORS_ORIGINS string into a list."""
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        """Reject insecure placeholder secrets in production."""
+        if self.APP_ENV.lower() == "production" and self.JWT_SECRET == (
+            "change-me-in-production"
+        ):
+            raise ValueError("JWT_SECRET must be configured in production.")
+        return self
 
 
 @lru_cache(maxsize=1)
