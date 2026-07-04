@@ -16,6 +16,7 @@ from src.observability.logging import configure_logging
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Create and dispose process-wide resources for the FastAPI app."""
     app.state.http_client = create_http_client()
     try:
         yield

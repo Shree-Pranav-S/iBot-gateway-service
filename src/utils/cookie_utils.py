@@ -1,8 +1,8 @@
 """Cookie helpers for the gateway's HttpOnly auth cookie strategy.
 
 The gateway is the only service that ever touches auth cookies.
-Downstream services only see the ``X-User-Id`` / ``X-User-Role`` headers
-that the gateway injects after validating the cookie.
+Downstream services only see the ``X-User-Id`` header that the gateway injects
+after validating the cookie.
 """
 
 from fastapi import Request, Response

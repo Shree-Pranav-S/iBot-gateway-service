@@ -216,14 +216,12 @@ async def handle_logout(request: Request) -> JSONResponse:
 async def proxy_authenticated(
     path: str,
     request: Request,
-    access_token: str,
     claims: dict[str, str],
 ) -> StreamingResponse | JSONResponse:
     """Proxy an authenticated request, injecting identity headers."""
     headers = copy_headers(request)
     headers["X-Internal-Service"] = "gateway"
     headers["X-User-Id"] = str(claims["sub"])
-    headers["X-User-Role"] = str(claims["role"])
 
     downstream_url = resolve_downstream(f"/{path}")
     target_url = f"{downstream_url.rstrip('/')}/{path}"

@@ -20,6 +20,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: GatewayException,
     ) -> JSONResponse:
+        """Render known gateway exceptions as the public error envelope."""
         logger.warning(
             "Gateway exception",
             extra={
@@ -38,6 +39,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: StarletteHTTPException,
     ) -> JSONResponse:
+        """Render Starlette HTTP exceptions as the public error envelope."""
         logger.warning(
             "HTTP exception occurred",
             extra={
@@ -56,6 +58,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestValidationError,
     ) -> JSONResponse:
+        """Render request validation failures with normalized field errors."""
         logger.warning(
             "Request validation failed",
             extra={"path": request.url.path, "method": request.method},
@@ -81,6 +84,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: Exception,
     ) -> JSONResponse:
+        """Render unexpected exceptions without exposing internal details."""
         logger.exception(
             "Unhandled gateway exception",
             extra={"path": request.url.path, "method": request.method},

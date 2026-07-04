@@ -15,6 +15,7 @@ class GatewayException(Exception):
         *,
         status_code: int | None = None,
     ) -> None:
+        """Initialize the exception with optional response message and status."""
         self.message = message or self.message
         self.status_code = status_code or self.status_code
         super().__init__(self.message)
@@ -39,17 +40,3 @@ class NotFoundException(GatewayException):
 
     status_code = HTTPStatus.NOT_FOUND
     message = "Route not found."
-
-
-class BadRequestException(GatewayException):
-    """Raised on invalid request formats/parameters."""
-
-    status_code = HTTPStatus.BAD_REQUEST
-    message = "Bad request."
-
-
-class InternalServerException(GatewayException):
-    """Raised for generic internal server errors."""
-
-    status_code = HTTPStatus.INTERNAL_SERVER_ERROR
-    message = "Internal server error."

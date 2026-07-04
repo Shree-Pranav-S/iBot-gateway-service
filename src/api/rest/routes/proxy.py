@@ -6,7 +6,7 @@ Auth flow:
 - POST /auth/refresh → read refresh cookie → rewrite body → proxy → update cookies
 - POST /auth/logout  → read refresh cookie → rewrite body → proxy → clear cookies
 - All other authenticated routes → read access cookie → decode JWT
-  → inject X-User-Id / X-User-Role → proxy downstream
+  → inject X-User-Id → proxy downstream
   → on 401: silently refresh once using the refresh cookie → retry
 """
 
@@ -51,7 +51,7 @@ router = APIRouter()
 )
 async def proxy_http_request(
     path: str, request: Request
-) -> StreamingResponse | JSONResponse:
+) -> StreamingResponse | JSONResponse | StarletteResponse:
     """Gateway catch-all HTTP proxy with cookie-based auth."""
 
     request_path = f"/{path}"
@@ -119,7 +119,7 @@ async def proxy_http_request(
 
         # Proxy the request with the freshly obtained claims and then
         # attach the updated cookies to the response.
-        streaming = await proxy_authenticated(path, request, new_access, claims)
+        streaming = await proxy_authenticated(path, request, claims)
 
         # SSE responses do not terminate under normal operation. Their headers
         # have not been sent yet, so refreshed cookies can be attached directly
@@ -148,6 +148,6 @@ async def proxy_http_request(
         )
         set_auth_cookies(plain_response, new_access, new_refresh)
         logger.info("Silent refresh succeeded — cookies updated on response")
-        return plain_response  # type: ignore[return-value]
+        return plain_response
 
-    return await proxy_authenticated(path, request, access_token, claims)  # type: ignore[arg-type]
+    return await proxy_authenticated(path, request, claims)

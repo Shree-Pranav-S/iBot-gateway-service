@@ -12,8 +12,5 @@ repos:
         additional_dependencies: [
           "pydantic>=2.7.0,<3.0.0",
           "pydantic-settings>=2.3.0,<3.0.0",
-          "sqlalchemy[asyncio]>=2.0.30,<2.1.0",
-          "fastapi>=0.111.0,<0.112.0",
-          "types-redis",
-          "types-requests"
+          "fastapi>=0.111.0,<0.112.0"
         ]

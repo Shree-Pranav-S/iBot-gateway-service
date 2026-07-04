@@ -1,4 +1,4 @@
-"""Stateless helper utilities for the gateway HTTP and WebSocket proxy."""
+"""Stateless helper utilities for the gateway HTTP proxy."""
 
 import httpx
 from fastapi import Request
@@ -22,10 +22,3 @@ def strip_response_headers(headers: httpx.Headers) -> dict[str, str]:
         for key, value in headers.items()
         if key.lower() not in HOP_BY_HOP_HEADERS
     }
-
-
-def ws_base_url(http_url: str) -> str:
-    """Convert an HTTP/HTTPS URL to its WebSocket equivalent (ws/wss)."""
-    if http_url.startswith("https://"):
-        return "wss://" + http_url.removeprefix("https://")
-    return "ws://" + http_url.removeprefix("http://")

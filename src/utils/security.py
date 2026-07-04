@@ -25,7 +25,7 @@ def decode_access_token(token: str | None) -> dict[str, str]:
     except JWTError as exc:
         raise UnauthorizedException("Invalid or expired token.") from exc
 
-    if not payload.get("sub") or not payload.get("role"):
+    if not payload.get("sub"):
         raise UnauthorizedException("Invalid token claims.")
 
     return payload
