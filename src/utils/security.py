@@ -3,18 +3,22 @@
 from jose import JWTError, jwt
 
 from src.config.settings import settings
-from src.core.exceptions import UnauthorizedException
+from src.core.exceptions.auth import (
+    InvalidTokenClaimsException,
+    InvalidTokenException,
+    MissingAccessTokenException,
+)
 
 
 def decode_access_token(token: str | None) -> dict[str, str]:
     """Decode and validate a raw JWT access token string.
 
-    Raises ``UnauthorizedException`` if the token is missing, malformed,
-    expired, or is missing required claims.
+    Raises auth exceptions if the token is missing, malformed, expired,
+    or is missing required claims.
     """
 
     if not token:
-        raise UnauthorizedException("Missing access token.")
+        raise MissingAccessTokenException()
 
     try:
         payload = jwt.decode(
@@ -23,9 +27,9 @@ def decode_access_token(token: str | None) -> dict[str, str]:
             algorithms=[settings.JWT_ALGORITHM],
         )
     except JWTError as exc:
-        raise UnauthorizedException("Invalid or expired token.") from exc
+        raise InvalidTokenException() from exc
 
     if not payload.get("sub"):
-        raise UnauthorizedException("Invalid token claims.")
+        raise InvalidTokenClaimsException()
 
     return payload

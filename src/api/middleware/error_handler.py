@@ -2,14 +2,28 @@
 
 import logging
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette import status
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.core.exceptions import GatewayException
+from src.core.exceptions import DownstreamUnavailableException, GatewayException
+from src.schemas.common import ErrorDetail, ErrorResponse
+from src.utils.cookie_utils import clear_auth_cookies
 
 logger = logging.getLogger(__name__)
+
+
+def _json_error(
+    *,
+    status_code: int,
+    message: str,
+    errors: list[ErrorDetail] | None = None,
+) -> JSONResponse:
+    payload = ErrorResponse(message=message, errors=errors)
+    return JSONResponse(status_code=status_code, content=payload.model_dump())
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -27,11 +41,44 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "path": request.url.path,
                 "method": request.method,
                 "status_code": exc.status_code,
+                "error_code": getattr(exc, "error_code", None),
+                "exception_type": type(exc).__name__,
             },
         )
-        return JSONResponse(
+        errors = (
+            [ErrorDetail(**detail) for detail in exc.details]
+            if exc.details is not None
+            else None
+        )
+        response = _json_error(
             status_code=exc.status_code,
-            content={"success": False, "message": exc.message},
+            message=exc.message,
+            errors=errors,
+        )
+        if getattr(exc, "clear_auth_cookies", False):
+            clear_auth_cookies(response)
+        return response
+
+    @app.exception_handler(httpx.RequestError)
+    async def httpx_request_error_handler(
+        request: Request,
+        exc: httpx.RequestError,
+    ) -> JSONResponse:
+        """Render downstream connection failures as a bad-gateway response."""
+        downstream_exc = DownstreamUnavailableException()
+        logger.error(
+            "Downstream connection error",
+            extra={
+                "path": request.url.path,
+                "method": request.method,
+                "status_code": downstream_exc.status_code,
+                "error_code": downstream_exc.error_code,
+                "exception_type": type(exc).__name__,
+            },
+        )
+        return _json_error(
+            status_code=downstream_exc.status_code,
+            message=downstream_exc.message,
         )
 
     @app.exception_handler(StarletteHTTPException)
@@ -48,9 +95,9 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "status_code": exc.status_code,
             },
         )
-        return JSONResponse(
+        return _json_error(
             status_code=exc.status_code,
-            content={"success": False, "message": exc.detail},
+            message=exc.detail,
         )
 
     @app.exception_handler(RequestValidationError)
@@ -64,19 +111,16 @@ def register_exception_handlers(app: FastAPI) -> None:
             extra={"path": request.url.path, "method": request.method},
         )
         errors = [
-            {
-                "field": ".".join(str(part) for part in error["loc"]),
-                "message": str(error["msg"]),
-            }
+            ErrorDetail(
+                field=".".join(str(part) for part in error["loc"]),
+                message=str(error["msg"]),
+            )
             for error in exc.errors()
         ]
-        return JSONResponse(
-            status_code=422,
-            content={
-                "success": False,
-                "message": "Request validation failed.",
-                "errors": errors,
-            },
+        return _json_error(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            message="Request validation failed.",
+            errors=errors,
         )
 
     @app.exception_handler(Exception)
@@ -89,7 +133,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             "Unhandled gateway exception",
             extra={"path": request.url.path, "method": request.method},
         )
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "message": "Internal server error."},
+        return _json_error(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message="Internal server error.",
         )

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 
+import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.responses import Response as StarletteResponse
@@ -23,6 +24,8 @@ from src.core.exceptions import (
     NotFoundException,
     UnauthorizedException,
 )
+from src.core.exceptions.auth import NoValidSessionException, SessionExpiredException
+from src.core.exceptions.proxy import DownstreamUnavailableException
 from src.core.services.proxy_config import (
     BLOCKED_ROUTES,
     UNAUTHENTICATED_ROUTES,
@@ -87,7 +90,13 @@ async def proxy_http_request(
             headers=headers,
             content=await request.body(),
         )
-        response = await request.app.state.http_client.send(proxy_request, stream=True)
+        try:
+            response = await request.app.state.http_client.send(
+                proxy_request, stream=True
+            )
+        except httpx.RequestError as exc:
+            logger.error(f"Downstream connection error on unauthenticated route: {exc}")
+            raise DownstreamUnavailableException() from exc
         response_headers = strip_response_headers(response.headers)
         from starlette.background import BackgroundTask
 
@@ -108,11 +117,11 @@ async def proxy_http_request(
         # Access token missing or expired — attempt a silent refresh.
         refresh_token = get_refresh_token(request)
         if not refresh_token:
-            raise UnauthorizedException("No valid session. Please log in.")
+            raise NoValidSessionException()
 
         result = await do_refresh(refresh_token, request.app.state.http_client)
         if result is None:
-            raise UnauthorizedException("Session expired. Please log in again.")
+            raise SessionExpiredException()
 
         new_access, new_refresh = result
         claims = decode_access_token(new_access)

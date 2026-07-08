@@ -15,6 +15,13 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
 from src.config.settings import settings
+from src.core.exceptions.auth import (
+    AuthenticationBackendException,
+    AuthenticationServiceUnavailableException,
+    MissingRefreshTokenException,
+    SessionExpiredException,
+)
+from src.core.exceptions.proxy import DownstreamUnavailableException
 from src.core.services.proxy_config import resolve_downstream
 from src.utils.cookie_utils import (
     clear_auth_cookies,
@@ -80,13 +87,7 @@ async def handle_login(request: Request) -> JSONResponse:
         )
     except httpx.RequestError as exc:
         logger.error(f"Downstream connection error in login: {exc}")
-        return JSONResponse(
-            content={
-                "success": False,
-                "message": "Authentication service unavailable.",
-            },
-            status_code=502,
-        )
+        raise AuthenticationServiceUnavailableException() from exc
 
     upstream_body = upstream_resp.json()
 
@@ -101,10 +102,7 @@ async def handle_login(request: Request) -> JSONResponse:
 
     if not access_token or not refresh_token:
         logger.error("core-api login response missing tokens")
-        return JSONResponse(
-            content={"success": False, "message": "Authentication backend error."},
-            status_code=502,
-        )
+        raise AuthenticationBackendException()
 
     # Core-api login returns tokens only — fetch the recruiter profile separately.
     claims = decode_access_token(access_token)
@@ -118,23 +116,14 @@ async def handle_login(request: Request) -> JSONResponse:
         )
     except httpx.RequestError as exc:
         logger.error(f"Failed to fetch profile due to connection error: {exc}")
-        return JSONResponse(
-            content={
-                "success": False,
-                "message": "Authentication service unavailable.",
-            },
-            status_code=502,
-        )
+        raise AuthenticationServiceUnavailableException() from exc
 
     if profile_resp.status_code != 200:
         logger.error(
             "Failed to fetch recruiter profile after login",
             extra={"status_code": profile_resp.status_code},
         )
-        return JSONResponse(
-            content={"success": False, "message": "Authentication backend error."},
-            status_code=502,
-        )
+        raise AuthenticationBackendException()
 
     profile_body = profile_resp.json()
     profile_data = profile_body.get("data")
@@ -155,24 +144,11 @@ async def handle_refresh(request: Request) -> JSONResponse:
     """Proxy POST /auth/refresh using the refresh cookie as the token source."""
     refresh_token = get_refresh_token(request)
     if not refresh_token:
-        resp = JSONResponse(
-            content={"success": False, "message": "No refresh token cookie present."},
-            status_code=401,
-        )
-        clear_auth_cookies(resp)
-        return resp
+        raise MissingRefreshTokenException()
 
     result = await do_refresh(refresh_token, request.app.state.http_client)
     if result is None:
-        resp = JSONResponse(
-            content={
-                "success": False,
-                "message": "Session expired. Please log in again.",
-            },
-            status_code=401,
-        )
-        clear_auth_cookies(resp)
-        return resp
+        raise SessionExpiredException()
 
     new_access, new_refresh = result
     json_response = JSONResponse(
@@ -217,7 +193,7 @@ async def proxy_authenticated(
     path: str,
     request: Request,
     claims: dict[str, str],
-) -> StreamingResponse | JSONResponse:
+) -> StreamingResponse:
     """Proxy an authenticated request, injecting identity headers."""
     headers = copy_headers(request)
     headers["X-Internal-Service"] = "gateway"
@@ -238,13 +214,7 @@ async def proxy_authenticated(
         response = await request.app.state.http_client.send(proxy_request, stream=True)
     except httpx.RequestError as exc:
         logger.error(f"Downstream connection error: {exc}")
-        return JSONResponse(
-            content={
-                "success": False,
-                "message": "Service unavailable or starting up.",
-            },
-            status_code=502,
-        )
+        raise DownstreamUnavailableException() from exc
 
     response_headers = strip_response_headers(response.headers)
     return StreamingResponse(
