@@ -8,6 +8,7 @@ ROUTE_MAP: tuple[tuple[str, str], ...] = (
     ("/auth", settings.CORE_API_URL),
     ("/assessments", settings.CORE_API_URL),
     ("/candidates", settings.CORE_API_URL),
+    ("/evaluations", settings.CORE_API_URL),
     ("/recruiter", settings.CORE_API_URL),
     ("/notifications", settings.CORE_API_URL),
     ("/interview", settings.CORE_API_URL),
